@@ -153,6 +153,8 @@ impl<E: JubjubEngine> EdwardsPoint<E> {
         tmp.push(x.last().unwrap().clone());
         tmp.extend(y);
 
+        tmp.reverse();
+
         Ok(tmp)
     }
 

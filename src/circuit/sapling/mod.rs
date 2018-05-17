@@ -226,9 +226,6 @@ impl<'a, E: JubjubEngine> Circuit<E> for Spend<'a, E> {
             constants::CRH_IVK_PERSONALIZATION
         )?;
 
-        // We need ivk in least significant bit first
-        ivk.reverse();
-
         // The most significant 5 bits are masked away
         // to ensure the result is in the field.
         ivk.truncate(E::Fs::CAPACITY as usize);
@@ -293,7 +290,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Spend<'a, E> {
             }
 
             // Place the value in the note
-            note_contents.extend(value_bits.into_iter().rev());
+            note_contents.extend(value_bits);
         }
 
         // Place g_d in the note
@@ -478,7 +475,7 @@ impl<'a, E: JubjubEngine> Circuit<E> for Output<'a, E> {
             cs.namespace(|| "value commitment"),
             self.value_commitment,
             self.params
-        )?.into_iter().rev());
+        )?);
 
         // Let's deal with g_d
         {
@@ -537,13 +534,10 @@ impl<'a, E: JubjubEngine> Circuit<E> for Output<'a, E> {
             let pk_d = self.payment_address.as_ref().map(|e| e.pk_d.into_xy());
 
             // Witness the y-coordinate, least significant bit first
-            let mut y_contents = boolean::field_into_boolean_vec_le(
+            let y_contents = boolean::field_into_boolean_vec_le(
                 cs.namespace(|| "pk_d bits of y"),
                 pk_d.map(|e| e.1)
             )?;
-
-            // Turn into big-endian
-            y_contents.reverse();
 
             // Witness the sign bit
             let sign_bit = boolean::Boolean::from(boolean::AllocatedBit::alloc(
@@ -552,8 +546,8 @@ impl<'a, E: JubjubEngine> Circuit<E> for Output<'a, E> {
             )?);
 
             // Extend the note with pk_d representation
-            note_contents.push(sign_bit);
             note_contents.extend(y_contents);
+            note_contents.push(sign_bit);
         }
 
         assert_eq!(
@@ -698,7 +692,7 @@ fn test_input_circuit_with_bls12_381() {
             }
 
             let expected_nf = note.nf(&viewing_key, position, params);
-            let expected_nf = multipack::bytes_to_bits(&expected_nf);
+            let expected_nf = multipack::le_bytes_to_bits(&expected_nf);
             let expected_nf = multipack::compute_multipacking::<Bls12>(&expected_nf);
             assert_eq!(expected_nf.len(), 2);
 
@@ -719,7 +713,7 @@ fn test_input_circuit_with_bls12_381() {
 
             assert!(cs.is_satisfied());
             assert_eq!(cs.num_constraints(), 98777);
-            assert_eq!(cs.hash(), "55e8feefadfc04768378d4fad5b2f3ebdefcffce5b2eb6dded14a1d374242858");
+            assert_eq!(cs.hash(), "d37c738e83df5d9b0bb6495ac96abf21bcb2697477e2c15c2c7916ff7a3b6a89");
 
             assert_eq!(cs.get("randomization of note commitment/x3/num"), cm);
 
@@ -796,7 +790,7 @@ fn test_output_circuit_with_bls12_381() {
 
             assert!(cs.is_satisfied());
             assert_eq!(cs.num_constraints(), 7827);
-            assert_eq!(cs.hash(), "aefdf3eed1aca3b66eeb152390518d1903ad1b764154e708a0033d12462417b3");
+            assert_eq!(cs.hash(), "c26d5cdfe6ccd65c03390902c02e11393ea6bb96aae32a7f2ecb12eb9103faee");
 
             let expected_cm = payment_address.create_note(
                 value_commitment.value,

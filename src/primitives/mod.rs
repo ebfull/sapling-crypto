@@ -14,7 +14,7 @@ use pedersen_hash::{
 };
 
 use byteorder::{
-    BigEndian,
+    LittleEndian,
     WriteBytesExt
 };
 
@@ -93,6 +93,10 @@ impl<E: JubjubEngine> ViewingKey<E> {
         let mut h = Blake2s::with_params(32, &[], &[], constants::CRH_IVK_PERSONALIZATION);
         h.update(&preimage);
         let mut h = h.finalize().as_ref().to_vec();
+
+        // Reverse the bytes so that the later read of big endian
+        // is read as little endian
+        h.reverse();
 
         // Drop the most significant five bits, so it can be interpreted
         // as a scalar in big endian.
@@ -195,7 +199,7 @@ impl<E: JubjubEngine> Note<E> {
         let mut note_contents = vec![];
 
         // Write the value in big endian
-        (&mut note_contents).write_u64::<BigEndian>(self.value).unwrap();
+        (&mut note_contents).write_u64::<LittleEndian>(self.value).unwrap();
 
         // Write g_d
         self.g_d.write(&mut note_contents).unwrap();
@@ -210,7 +214,7 @@ impl<E: JubjubEngine> Note<E> {
             Personalization::NoteCommitment,
             note_contents.into_iter()
                          .flat_map(|byte| {
-                            (0..8).rev().map(move |i| ((byte >> i) & 1) == 1)
+                            (0..8).map(move |i| ((byte >> i) & 1) == 1)
                          }),
             params
         );

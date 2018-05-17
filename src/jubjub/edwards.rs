@@ -91,10 +91,15 @@ impl<E: JubjubEngine, Subgroup> PartialEq for Point<E, Subgroup> {
 
 impl<E: JubjubEngine> Point<E, Unknown> {
     pub fn read<R: Read>(
-        reader: R,
+        mut reader: R,
         params: &E::Params
     ) -> io::Result<Self>
     {
+        let mut tmp = [0; 32];
+        reader.read_exact(&mut tmp[..])?;
+        tmp.reverse();
+        let reader = &tmp[..];
+
         // Read the y-coordinate as a big-endian integer
         let mut y_repr = <E::Fr as PrimeField>::Repr::default();
         y_repr.read_be(reader)?;
@@ -191,7 +196,7 @@ impl<E: JubjubEngine> Point<E, Unknown> {
 impl<E: JubjubEngine, Subgroup> Point<E, Subgroup> {
     pub fn write<W: Write>(
         &self,
-        writer: W
+        mut writer: W
     ) -> io::Result<()>
     {
         let (x, y) = self.into_xy();
@@ -204,7 +209,11 @@ impl<E: JubjubEngine, Subgroup> Point<E, Subgroup> {
             y_repr.as_mut()[3] |= 0x8000000000000000u64;
         }
 
-        y_repr.write_be(writer)
+        let mut tmp = [0; 32];
+        y_repr.write_be(&mut tmp[..])?;
+        tmp.reverse();
+
+        writer.write_all(&tmp)
     }
 
     /// Convert from a Montgomery point
