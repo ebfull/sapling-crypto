@@ -12,6 +12,11 @@ version = "0.0.1"
 version = "0.14"
 features = ["expose-arith"]
 
+# This is just temporary until pairing #82 is merged.
+[patch.crates-io.pairing]
+git = "https://github.com/str4d/pairing"
+rev = "2a28b614689d3219afe36d51c75768c6e76000ca"
+
 [dependencies]
 rand = "0.4"
 digest = "0.7"
