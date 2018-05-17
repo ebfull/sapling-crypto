@@ -11,6 +11,8 @@ use util::{hash_to_scalar};
 fn read_scalar<E: JubjubEngine, R: Read>(reader: R) -> io::Result<E::Fs> {
     let mut s_repr = <E::Fs as PrimeField>::Repr::default();
 
+    // TODO: little endian
+
     s_repr.read_be(reader)?;
 
     match E::Fs::from_repr(s_repr) {
